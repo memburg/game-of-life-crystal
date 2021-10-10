@@ -1,9 +1,10 @@
 # Game of Life: A Crystal Implementation
 
-# Grid struct (avoid using OOP :D)
+# Grid struct
 #
 # @width: grid width
 # @height: grid height
+# @area: total cells
 # @grid: an array of arrays (container of cells)
 # @alive_cells_pct: percentage of alive cells during initialisation
 # @render_time: refresh between iterations (in seconds)
@@ -53,27 +54,28 @@ struct Grid
     # Print grid data and clear console
     puts "\33c\e[3JGrid size: #{@width}x#{@height}  Alive cells: #{@alive_cells}  Dead cells: #{@dead_cells}  Generation: #{@generation}\n\n"
 
-    j : Int32 = 0
+    i : Int32 = @width
 
-    while j < @height
-      i : Int32 = 0
+    while i <= @area
+      puts "| #{@grid[i - @width..i - 1].join(" ")} |"
+      i += @width
+    end
+  end
 
-      while i < @width
-        # Note that this implementation MUST be improved
-        i += 1
-      end
+  def recalculate_cells
+    loop do
+      # Print grid data and clear console
+      print_grid
 
-      puts "| #{@grid[j, i].join(" ")} |"
-
-      j += 1
+      sleep(@render_time)
     end
   end
 end
 
 # Initialise grid
-grid = Grid.new(20, 20, 30, 1)
+grid = Grid.new(3, 3, 30, 2)
 
 # Initialise board
 grid.initialise_grid
 grid.set_alive_cells
-grid.print_grid
+grid.recalculate_cells
