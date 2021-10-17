@@ -16,7 +16,7 @@ struct Grid
   property area = 0
   property alive_cells_pct
   property render_time
-  property grid = [] of Int32
+  property grid = [] of Array(Int32)
   property alive_cells = 0
   property dead_cells = 0
   property generation = 0
@@ -26,23 +26,30 @@ struct Grid
   end
 
   def initialise_grid
-    # Create array of arrays full of 0's
-    @grid = Array.new(@width * @height, 0)
+    # Set array of arrays full of 0's
+    @grid = Array.new(@width) { Array.new(@height) { 0 } }
   end
 
   def set_alive_cells
-    idx : Int32 = 0
+    # Declare Y axis index
+    y_axis : Int32 = 0
 
     loop do
-      # If random number less equals alive cells
-      # percentage, then set that cell as alive.
-      if Random.rand(100) <= @alive_cells_pct
-        @grid[idx] = 1
-        @alive_cells += 1
+      # Declare X axis index
+      x_axis : Int32 = 0
+
+      loop do
+        if Random.rand(100) <= @alive_cells_pct
+          @grid[y_axis][x_axis] = 1
+          @alive_cells += 1
+        end
+
+        x_axis += 1
+        break if x_axis == @width
       end
 
-      idx += 1
-      break if idx == @area
+      y_axis += 1
+      break if y_axis == @height
     end
 
     # Dead cells are calculated extracting
@@ -51,31 +58,110 @@ struct Grid
   end
 
   def print_grid
-    # Print grid data and clear console
+    # Clear console & print grid data
     puts "\33c\e[3JGrid size: #{@width}x#{@height}  Alive cells: #{@alive_cells}  Dead cells: #{@dead_cells}  Generation: #{@generation}\n\n"
 
-    i : Int32 = @width
+    # Declare Y axis index
+    y_axis : Int32 = 0
 
-    while i <= @area
-      puts "| #{@grid[i - @width..i - 1].join(" ")} |"
-      i += @width
+    loop do
+      # Declare X axis index
+      x_axis : Int32 = 0
+      emoji_str : String = ""
+
+      loop do
+        # Concatenate emojis to emoji string
+        emoji_str += @grid[y_axis][x_axis] == 0 ? '🌚' : '🌝'
+
+        x_axis += 1
+        break if x_axis == @width
+      end
+
+      puts emoji_str
+
+      y_axis += 1
+      break if y_axis == @height
     end
   end
 
-  def recalculate_cells
-    loop do
-      # Print grid data and clear console
-      print_grid
+  def recompute_cells
+    # Create grid copy
+    grid_copy = @grid.clone
 
+    # Declare Y axis index
+    y_axis : Int32 = 0
+
+    loop do
+      # Declare X axis index
+      x_axis : Int32 = 0
+
+      loop do
+        # Current cell neighbourhood
+        left : Int32 = x_axis - 1
+        right : Int32 = x_axis + 1
+        upper : Int32 = y_axis - 1
+        bottom : Int32 = y_axis + 1
+
+        # Adjust out of range indexes
+        left = left < 0 ? @width - 1 : left
+        right = right > @width - 1 ? 0 : right
+        upper = upper < 0 ? @height - 1 : upper
+        bottom = bottom > @height - 1 ? 0 : bottom
+
+        alive_n : Int32 = @grid[upper][left] + @grid[upper][x_axis] + @grid[upper][right] + @grid[y_axis][left] + @grid[y_axis][right] + @grid[bottom][left] + @grid[bottom][x_axis] + @grid[bottom][right]
+
+        if (@grid[y_axis][x_axis] == 0 && alive_n == 3)
+          grid_copy[y_axis][x_axis] = 1
+        elsif (@grid[y_axis][x_axis] == 1 && (alive_n == 3 || alive_n == 2))
+          grid_copy[y_axis][x_axis] = 1
+        else
+          grid_copy[y_axis][x_axis] = 0
+        end
+
+        x_axis += 1
+        break if x_axis == @width
+      end
+
+      y_axis += 1
+      break if y_axis == @height
+    end
+
+    @grid = grid_copy.clone
+    @generation += 1
+  end
+
+  def count_dead_alive_cells
+    alive_cells : Int32 = 0
+    idx : Int32 = 0
+
+    loop do
+      # Count every alive cell in each array inside main array
+      alive_cells += @grid[idx].count(1)
+
+      idx += 1
+      break if idx == @height
+    end
+
+    @alive_cells = alive_cells
+    @dead_cells = @area - @alive_cells
+  end
+
+  def play
+    while true
+      print_grid
+      recompute_cells
+      count_dead_alive_cells
       sleep(@render_time)
     end
   end
 end
 
 # Initialise grid
-grid = Grid.new(3, 3, 30, 2)
-
-# Initialise board
+grid = Grid.new(10, 10, 30, 1)
 grid.initialise_grid
+
+# Set grid values (alive cells)
 grid.set_alive_cells
-grid.recalculate_cells
+
+# Start the Game of Life
+grid.play
